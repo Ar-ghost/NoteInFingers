@@ -1,3 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
+
     <string name="app_name">NoteInFingers</string>
+    <string name="title_activity_initial_aty">InitialAty</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+    <string name="title_activity_select_aty">SelectAty</string>
+    <string name="title_activity_one_page_aty">OnePageAty</string>
+
 </resources>
