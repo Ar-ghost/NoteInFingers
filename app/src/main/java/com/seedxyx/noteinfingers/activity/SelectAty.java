@@ -1,11 +1,13 @@
 package com.seedxyx.noteinfingers.activity;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 
 import com.seedxyx.noteinfingers.R;
+import com.seedxyx.noteinfingers.unity.Note;
 
 public class SelectAty extends Activity {
 

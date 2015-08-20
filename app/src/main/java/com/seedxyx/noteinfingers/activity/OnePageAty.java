@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
+import android.media.ThumbnailUtils;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -18,15 +19,18 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.widget.AbsoluteLayout;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.MediaController;
+import android.widget.RelativeLayout;
 import android.widget.Toast;
 import android.widget.VideoView;
 
 import com.seedxyx.noteinfingers.R;
+import com.seedxyx.noteinfingers.util.StrConversionUtil;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -42,7 +46,6 @@ public class OnePageAty extends Activity {
     private final int VIDEO_LONG_REQUEST_CODE=2222;
     private final int SOUND_LONG_REQUEST_CODE=3333;
 
-    private EditText test;
     private Button btnCamera;
     private Button btnSound;
     private Button btnViedo;
@@ -56,62 +59,30 @@ public class OnePageAty extends Activity {
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.activity_one_page);
 
-
-        final LinearLayout ly=(LinearLayout)findViewById(R.id.ly);
-
-        Button add=(Button)findViewById(R.id.add);
-
-
-        VideoView videoView=(VideoView)findViewById(R.id.videoView);
-        String sdDir=Environment.getExternalStorageDirectory().toString();
-        String fileName = sdDir+"/"+"Movies/QQ视频20150710101843.mp4";
-        File file=new File(fileName);
-        videoView.setVideoPath(file.getAbsolutePath());
-        MediaController mediaController=new MediaController(OnePageAty.this);
-        videoView.setMediaController(mediaController);
-        mediaController.setMediaPlayer(videoView);
-
-        add.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                ImageView imageView=new ImageView(OnePageAty.this);
-                imageView.setImageResource(R.drawable.ic_launcher);
-                ly.addView(imageView);
-
-
-                VideoView videoView=new VideoView(OnePageAty.this);
-                ViewGroup.LayoutParams layoutParams=new ViewGroup.LayoutParams(300,300);
-                videoView.setLayoutParams(layoutParams);
-                String sdDir=Environment.getExternalStorageDirectory().toString();
-                String fileName = sdDir+"/"+"Movies/QQ视频20150710101843.mp4";
-                File file=new File(fileName);
-                videoView.setVideoPath(file.getAbsolutePath());
-                MediaController mController=new MediaController(OnePageAty.this);
-                videoView.setMediaController(mController);
-                mController.setMediaPlayer(videoView);
-                ly.addView(videoView);
-            }
-        });
-
-
-
-        test=(EditText)findViewById(R.id.test);
-        SpannableString ss = new SpannableString("123456789");
-        Drawable d = getResources().getDrawable(R.drawable.ic_launcher);
-        d.setBounds(0, 0, d.getIntrinsicWidth(), d.getIntrinsicHeight());
-        //创建ImageSpan
-        ImageSpan span = new ImageSpan(d, ImageSpan.ALIGN_BASELINE);
-        //用ImageSpan替换文本
-        ss.setSpan(span, 0, 2, Spannable.SPAN_INCLUSIVE_EXCLUSIVE);
-
-        test.setText(ss);
-        test.append("<img src=");
-
-
-
         btnCamera=(Button)findViewById(R.id.btnCamera);
         btnViedo=(Button)findViewById(R.id.btnVideo);
         btnSound=(Button)findViewById(R.id.btnSound);
+
+
+
+        LinearLayout layout=(LinearLayout)findViewById(R.id.layout);
+
+        EditText editText=new EditText(this);
+        editText.setText("1");
+        EditText editText1=new EditText(this);
+        editText1.setText("2");
+        layout.addView(editText,2);
+        layout.addView(editText1,2);
+
+
+
+      //  ImageView imageView=new ImageView(this);
+      //  imageView.setImageBitmap(ThumbnailUtils.createVideoThumbnail(sdDir.toString()+"/Movies/QQ视频20150710101843.mp4",
+      //                  MediaStore.Images.Thumbnails.MINI_KIND));
+      //  layout.addView(imageView,0);
+
+
+
 
         //启动相机，长按此按钮为添加现有图片
         btnCamera.setOnClickListener(new View.OnClickListener() {
@@ -201,7 +172,7 @@ public class OnePageAty extends Activity {
                     e.printStackTrace();
                 }
             }
-            ((ImageView) findViewById(R.id.imageView)).setImageBitmap(bitmap);// 将图片显示在ImageView里
+            //((ImageView) findViewById(R.id.imageView)).setImageBitmap(bitmap);// 将图片显示在ImageView里
         }
         if(resultCode == Activity.RESULT_OK&&requestCode==VIDEO_REQUEST_CODE){
 

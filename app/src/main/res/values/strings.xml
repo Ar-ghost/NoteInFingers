@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
+    <string name="app_name_ch">指间记</string>
+
     <string name="app_name">NoteInFingers</string>
     <string name="title_activity_initial_aty">InitialAty</string>
     <string name="hello_world">Hello world!</string>
