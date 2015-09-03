@@ -36,7 +36,7 @@ public class NoteDBHelper extends SQLiteOpenHelper {
 
     public boolean addNewNote(String noteName) {
         try {
-            SimpleDateFormat sDateFormat = new SimpleDateFormat("YYYY-MM-DD  hh:mm:ss");
+            SimpleDateFormat sDateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
             String nowTime = sDateFormat.format(new Date());
             SQLiteDatabase db=this.getReadableDatabase();
             //开始事务
@@ -131,7 +131,7 @@ public class NoteDBHelper extends SQLiteOpenHelper {
     }
     public boolean deletePage(Note note,int pageNumber){
         try{
-            SimpleDateFormat sDateFormat = new SimpleDateFormat("YYYY-MM-DD  hh:mm:ss");
+            SimpleDateFormat sDateFormat = new SimpleDateFormat("yyyy-MM-dd  HH:mm:ss");
             String nowTime = sDateFormat.format(new Date());
             SQLiteDatabase db=this.getReadableDatabase();
             db.beginTransaction();
@@ -186,7 +186,8 @@ public class NoteDBHelper extends SQLiteOpenHelper {
         }
         return arrayList;
     }
-    public Page readPage(String noteName,int pageNumber){
+    public Page readPage(Note note,int pageNumber){
+        String noteName=note.getNoteName();
         Cursor cursor;
         if(pageNumber==1)
         {
@@ -196,10 +197,17 @@ public class NoteDBHelper extends SQLiteOpenHelper {
                     Integer.toString(pageNumber-2),null);
         }
         cursor.moveToFirst();
-        return new Page(pageNumber,cursor.getString(cursor.getColumnIndex("noteName")),
+        return new Page(pageNumber,Integer.parseInt(cursor.getString(cursor.getColumnIndex("tagNumber"))),
                 cursor.getString(cursor.getColumnIndex("createTime")),
                 cursor.getString(cursor.getColumnIndex("latestTime")),
-                cursor.getString(cursor.getColumnIndex("contentString")));
+                cursor.getString(cursor.getColumnIndex("contentString")),note);
     }
+    public Page readPage(Note note){
+        Cursor cursor=this.getReadableDatabase().rawQuery("select pageNumber from "+note.getNoteName()+" order by latestTime desc limit 1",null);
+        cursor.moveToFirst();
+        int pageNumber=Integer.parseInt(cursor.getString(0));
+        return readPage(note,pageNumber);
+    }
+
 
 }

@@ -33,6 +33,7 @@ public class InitialAty extends Activity {
                 intent.setClass(InitialAty.this,OnePageAty.class);
                 startActivity(intent);
                 finish();    //跳转后销毁自身的activity  否则按返回 还会跳回到图片
+                overridePendingTransition(R.anim.in_from_right,R.anim.out_to_left);
             }
         }.start();
 

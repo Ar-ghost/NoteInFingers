@@ -14,7 +14,10 @@ public class Note implements Parcelable{
 
 
     public Note(){
-
+        noteName="";
+        createTime="";
+        latestTime="";
+        pagesNumber=0;
     }
     public Note(String noteName,String createTime,String latestTime,int pagesNumber){
         this.noteName=noteName;
@@ -24,9 +27,6 @@ public class Note implements Parcelable{
     }
     public void setNoteName(String noteName){
         this.noteName=noteName;
-    }
-    public void setCreateTime(String createTime){
-        this.createTime=createTime;
     }
     public void setLatestTime(String latestTime){
         this.latestTime=latestTime;
@@ -48,6 +48,12 @@ public class Note implements Parcelable{
     }
 
 
+    //更新最后更改时间，时间由page传递过来
+    public void updateLatestTime(String time){
+        latestTime=time;
+    }
+
+    //parcelable接口必须实现的方法
     public static final Parcelable.Creator<Note> CREATOR = new Creator<Note>() {
         public Note createFromParcel(Parcel source) {
             Note note = new Note();
@@ -61,7 +67,6 @@ public class Note implements Parcelable{
             return new Note[size];
         }
     };
-
     public int describeContents() {
         return 0;
     }
@@ -71,6 +76,5 @@ public class Note implements Parcelable{
         parcel.writeString(latestTime);
         parcel.writeInt(pagesNumber);
     }
-
 
 }

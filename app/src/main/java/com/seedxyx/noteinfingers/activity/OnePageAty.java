@@ -1,21 +1,29 @@
 package com.seedxyx.noteinfingers.activity;
 
+import android.animation.ObjectAnimator;
 import android.app.ActionBar;
 import android.app.Activity;
 import android.content.Intent;
+import android.database.Cursor;
+import android.gesture.GestureOverlayView;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.drawable.Drawable;
 import android.media.ThumbnailUtils;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Parcel;
 import android.provider.MediaStore;
 import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.style.ImageSpan;
 import android.util.Log;
+import android.view.GestureDetector;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -30,14 +38,28 @@ import android.widget.Toast;
 import android.widget.VideoView;
 
 import com.seedxyx.noteinfingers.R;
+import com.seedxyx.noteinfingers.dbhelper.NoteDBHelper;
+import com.seedxyx.noteinfingers.unity.Note;
+import com.seedxyx.noteinfingers.unity.Page;
 import com.seedxyx.noteinfingers.util.StrConversionUtil;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.channels.FileChannel;
+import java.nio.charset.Charset;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
 
-public class OnePageAty extends Activity {
+public class OnePageAty extends Activity implements GestureDetector.OnGestureListener {
+    //手势检测器
+    GestureDetector detector;
+
+    //上滑调出菜单的长度
+    private final int FLIP_DISTANCE_MENU=100;
 
     private final int CAMERA_REQUEST_CODE=111;
     private final int VIDEO_REQUEST_CODE=222;
@@ -49,40 +71,51 @@ public class OnePageAty extends Activity {
     private Button btnCamera;
     private Button btnSound;
     private Button btnViedo;
+    //隐藏菜单的layout
+    LinearLayout hiddenLayout;
+    private LinearLayout layout;
 
-    //app对应存储路径
+   //app对应存储文件夹
     private String storage;
+    //记录存储文件，便于OnResult后处理
+    private String tmpFileName;
+    NoteDBHelper dbHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.activity_one_page);
+        //创建手势检测器
+        detector=new GestureDetector(this,this);
+        //加载数据
+        dbHelper=new NoteDBHelper(OnePageAty.this,"note.db",1);
+        //Note note=getIntent().getParcelableExtra("note");
+        //if(getIntent().getIntExtra("pageNumber",0)==0)
+        //{
+        //    Page page=dbHelper.readPage(note,getIntent().getIntExtra("pageNumber",0));
+        //}else{
+//            Page page=dbHelper.readPage(note);
+//        }
+        Note note=new Note();
+
+        //未找到sd卡则退出界面
+        if(null==(storage=getSdCar()))
+            OnePageAty.this.finish();
+        storage+="/NoteInFingers/"+note.getNoteName()+"/";
+
+        final File storageFile=new File(storage);
+        //如果文件夹不存在则创建文件夹路径
+        if(!storageFile.exists())
+        {
+            storageFile.mkdirs();
+        }
 
         btnCamera=(Button)findViewById(R.id.btnCamera);
         btnViedo=(Button)findViewById(R.id.btnVideo);
         btnSound=(Button)findViewById(R.id.btnSound);
-
-
-
-        LinearLayout layout=(LinearLayout)findViewById(R.id.layout);
-
-        EditText editText=new EditText(this);
-        editText.setText("1");
-        EditText editText1=new EditText(this);
-        editText1.setText("2");
-        layout.addView(editText,2);
-        layout.addView(editText1,2);
-
-
-
-      //  ImageView imageView=new ImageView(this);
-      //  imageView.setImageBitmap(ThumbnailUtils.createVideoThumbnail(sdDir.toString()+"/Movies/QQ视频20150710101843.mp4",
-      //                  MediaStore.Images.Thumbnails.MINI_KIND));
-      //  layout.addView(imageView,0);
-
-
-
+        layout=(LinearLayout)findViewById(R.id.layout);
+        hiddenLayout=(LinearLayout)findViewById(R.id.hiddenLayout);
 
         //启动相机，长按此按钮为添加现有图片
         btnCamera.setOnClickListener(new View.OnClickListener() {
@@ -107,13 +140,19 @@ public class OnePageAty extends Activity {
             @Override
             public void onClick(View view) {
                 Intent intent=new Intent(MediaStore.Audio.Media.RECORD_SOUND_ACTION);
+                //tmpFileName=storage+getTime()+".mp3";
+                //intent.putExtra(MediaStore.EXTRA_OUTPUT,Uri.fromFile(new File(tmpFileName)));
                 startActivityForResult(intent,SOUND_REQUEST_CODE);
             }
         });
         btnSound.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View view) {
-                return false;
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setType("audio/*");
+                startActivityForResult(intent,SOUND_LONG_REQUEST_CODE);
+                return true;
             }
         });
         //启动摄像机，长按此按钮为添加现有视频
@@ -121,13 +160,19 @@ public class OnePageAty extends Activity {
             @Override
             public void onClick(View view) {
                 Intent intent=new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
-                startActivityForResult(intent,VIDEO_REQUEST_CODE);
+                tmpFileName=storage+getTime()+".mp4";
+                intent.putExtra(MediaStore.EXTRA_OUTPUT,Uri.fromFile(new File(tmpFileName)));
+                startActivityForResult(intent, VIDEO_REQUEST_CODE);
             }
         });
         btnViedo.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View view) {
-                return false;
+                Intent intent=new Intent(Intent.ACTION_GET_CONTENT);
+                intent.setType("video/*");
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                startActivityForResult(intent,VIDEO_LONG_REQUEST_CODE);
+                return true;
             }
         });
 
@@ -136,29 +181,14 @@ public class OnePageAty extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data){
         super.onActivityResult(requestCode, resultCode, data);
-
+        //如果为拍摄照片，如果对返回的压缩图片不满意可更改为原图
         if (resultCode == Activity.RESULT_OK&&requestCode==CAMERA_REQUEST_CODE) {
-            String sdStatus = Environment.getExternalStorageState();
-            if (!sdStatus.equals(Environment.MEDIA_MOUNTED)) { // 检测sd是否可用
-                Log.v("TestFile",
-                        "SD card is not avaiable/writeable right now.");
-                //------------需要添加SD卡存储无法使用时的处理-------------
-                Toast.makeText(OnePageAty.this,"请插入SD卡使用！",Toast.LENGTH_LONG).show();
-                return;
-            }
-
-            //获取SD卡本app设立的目录
-            String sdDir=Environment.getExternalStorageDirectory().toString();
-            File file = new File(sdDir+"/"+"FreeNote/");
-            file.mkdirs();// 创建文件夹
-            String fileName = sdDir+"/"+"FreeNote/test.jpg";
-
-
+            //取得返回的数据包
             Bundle bundle = data.getExtras();
             Bitmap bitmap = (Bitmap) bundle.get("data");// 获取相机返回的数据，并转换为Bitmap图片格式
             FileOutputStream b = null;
             try {
-                b = new FileOutputStream(fileName);
+                b = new FileOutputStream(storage+getTime()+".jpg");
                 bitmap.compress(Bitmap.CompressFormat.JPEG, 100, b);// 把数据写入文件
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
@@ -166,47 +196,211 @@ public class OnePageAty extends Activity {
                 try {
                     b.flush();
                     b.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
                 }catch (Exception e){
                     e.printStackTrace();
                 }
             }
-            //((ImageView) findViewById(R.id.imageView)).setImageBitmap(bitmap);// 将图片显示在ImageView里
+            //调用方法添加View及更改数据
+            //StrConversionUtil.addImageView(OnePageAty.this,page,storage+getTime()+".jpg",layout);
         }
+        //如果为拍摄录像
         if(resultCode == Activity.RESULT_OK&&requestCode==VIDEO_REQUEST_CODE){
-
+            //成功拍摄后调用方法添加数据
+            if(tmpFileName!=null) {
+                //StrConversionUtil.addVideoView(OnePageAty.this, page, tmpFileName, layout);
+            }
+            tmpFileName=null;
         }
         if(resultCode == Activity.RESULT_OK&&requestCode==SOUND_REQUEST_CODE){
+            //成功录音后调用方法添加数据
+            //----------------
+            Uri audioPath=data.getData();
+            String dest=storage+getTime()+".mp3";
+
+
+
+            Log.i("charset", Charset.defaultCharset().displayName());
+            Log.i("path",audioPath.toString().substring(7));
+            try {
+                Log.i("path-gbk", new String(audioPath.toString().getBytes("utf-8"), "GB2312"));
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace();
+            }
+            Log.i("路径","中文打印");
+
+            copyTo(audioPath.toString().substring(7), dest);
+            //StrConversionUtil.addImageView(OnePageAty.this,page,dest,layout);
 
         }
-
+        //如果为选择现有图片
         if(resultCode == Activity.RESULT_OK&&requestCode==CAMERA_LONG_REQUEST_CODE){
-            Toast.makeText(OnePageAty.this,"选择图片",Toast.LENGTH_LONG).show();
+            addExist(data,".jpg","请选择图片文件！");
+        }
+        //选择现有视频
+        if(resultCode == Activity.RESULT_OK&&requestCode==VIDEO_LONG_REQUEST_CODE){
+            addExist(data,".mp4","请选择视频文件！");
+        }
+        if(resultCode == Activity.RESULT_OK&&requestCode==SOUND_LONG_REQUEST_CODE){
+            if(data.getData().toString().startsWith("file://"))
+            {
+                Uri audioPath=data.getData();
+                String dest=storage+getTime()+".mp3";
+                copyTo(audioPath.toString().substring(7),dest);
+                //StrConversionUtil.addImageView(OnePageAty.this,page,dest,layout);
+                return;
+            }
+            addExist(data,".mp3","请选择音频文件！");
         }
     }
 
-
+    protected void addExist(Intent data,String suffix,String toastStr){
+        Uri selected = data.getData();
+        String[] filePathColumn = { MediaStore.Audio.Media.DATA };
+        Cursor cursor = getContentResolver().query(selected,null, null, null, null);
+        if(cursor==null)
+        {
+            Toast.makeText(OnePageAty.this,toastStr,Toast.LENGTH_LONG).show();
+            return;
+        }
+        cursor.moveToFirst();
+        String picturePath = cursor.getString(cursor.getColumnIndex(filePathColumn[0]));
+        Log.i("path",picturePath);
+        cursor.close();
+        if(!picturePath.endsWith(suffix))
+        {
+            Toast.makeText(OnePageAty.this,toastStr,Toast.LENGTH_LONG).show();
+            return;
+        }
+        String dest=storage+getTime()+suffix;
+        copyTo(picturePath,dest);
+        //StrConversionUtil.addImageView(OnePageAty.this,page,dest,layout);
+    }
 
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_one_page_aty, menu);
+    protected void onPause(){
+        super.onPause();
+        writeToDB();
+    }
+
+    //将数据写入数据库
+    protected void writeToDB(){
+
+    }
+
+    //将图片写入SD卡
+
+    //获取SD卡绝对路径
+    protected String getSdCar(){
+        if (!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) { // 检测sd是否可用
+            Log.v("TestFile","SD card is not avaiable/writeable right now.");
+            //------------需要添加SD卡存储无法使用时的处理-------------
+            Toast.makeText(OnePageAty.this,"请插入SD卡使用！",Toast.LENGTH_LONG).show();
+            return null;
+        }
+        //获取SD卡目录
+        return Environment.getExternalStorageDirectory().toString();
+    }
+
+    //复制文件的方法
+    protected boolean copyTo(String src,String dest){
+        FileInputStream fi = null;
+        FileOutputStream fo = null;
+        FileChannel in = null;
+        FileChannel out = null;
+        try {
+            fi = new FileInputStream(src);
+            fo = new FileOutputStream(dest);
+            in = fi.getChannel();//得到对应的文件通道
+            out = fo.getChannel();//得到对应的文件通道
+            in.transferTo(0, in.size(), out);//连接两个通道，并且从in通道读取，然后写入out通道
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        } finally {
+            try {
+                fi.close();
+                in.close();
+                fo.close();
+                out.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+                return false;
+            }
+        }
         return true;
     }
+    //获取当前时间
+    protected String getTime(){
+        SimpleDateFormat sDateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
+        return sDateFormat.format(new Date());
+    }
+
+
+    //--------处理界面的触碰事件--------
+
+    //触碰事件的优先级处理
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent me){
+        detector.onTouchEvent(me);
+        return super.dispatchTouchEvent(me);
+    }
+    //--------重写手势检测器的方法----------
+    @Override
+    public boolean onDown(android.view.MotionEvent motionEvent){
+        Log.i("onDown","");
+        return false;
+    }
 
     @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
+    public void onShowPress(android.view.MotionEvent motionEvent){
 
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
+    }
+
+    @Override
+    public boolean onSingleTapUp(android.view.MotionEvent motionEvent){
+        return false;
+    }
+
+    @Override
+    public boolean onScroll(android.view.MotionEvent motionEvent, android.view.MotionEvent motionEvent1, float v, float v1){
+        return false;
+    }
+
+    @Override
+    public void onLongPress(android.view.MotionEvent motionEvent){
+
+    }
+
+    public boolean onFling(android.view.MotionEvent motionEvent1, android.view.MotionEvent motionEvent2, float vx, float vy){
+        //向上划
+        if(motionEvent1.getY()-motionEvent2.getY()>FLIP_DISTANCE_MENU&&vy<-500&&hiddenLayout.getTranslationY()==0)
+        {
+            ObjectAnimator animator=ObjectAnimator.ofFloat(hiddenLayout,"translationY",-hiddenLayout.getHeight());
+            animator.setDuration(100);
+            animator.start();
             return true;
         }
+        else if(motionEvent2.getY()-motionEvent1.getY()>FLIP_DISTANCE_MENU&&vy>500&&hiddenLayout.getTranslationY()==-hiddenLayout.getHeight())
+        {
+            ObjectAnimator animator=ObjectAnimator.ofFloat(hiddenLayout,"translationY",0);
+            animator.setDuration(100);
+            animator.start();
+            return true;
+        }
+        //向左滑,页码加1
+        else if(motionEvent1.getX()-motionEvent2.getX()>FLIP_DISTANCE_MENU&&vx<-500)
+        {
 
-        return super.onOptionsItemSelected(item);
+            return true;
+        }
+        //向右滑，页码减1
+        else if(motionEvent2.getX()-motionEvent1.getX()>FLIP_DISTANCE_MENU&&vx>500)
+        {
+            return true;
+        }
+        return false;
     }
+
 }
