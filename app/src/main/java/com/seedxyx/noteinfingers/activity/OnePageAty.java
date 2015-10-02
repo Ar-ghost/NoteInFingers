@@ -109,7 +109,7 @@ public class OnePageAty extends Activity implements GestureDetector.OnGestureLis
         //加载对应的page
         if(getIntent().getIntExtra("pageNumber",0)!=0)
         {
-            Log.i("query--with pageNumber info","");
+            Log.i("query--with pageNumber info:",Integer.toString(getIntent().getIntExtra("pageNumber",0)));
             page=dbHelper.readPage(note,getIntent().getIntExtra("pageNumber",0));
         }else{
             Log.i("query---no pageNubmer info","");
@@ -318,6 +318,10 @@ public class OnePageAty extends Activity implements GestureDetector.OnGestureLis
         //更新完毕之后
         if(page.getContentString().replaceAll(StrConversionUtil.WORDTAG,"").replaceAll(StrConversionUtil.SEPARATER,"").equals("")){
             if(note.getPagesNumber()!=0){
+                //如果这一页本来就不存在
+                if(page.getPageNumber()>note.getPagesNumber()){
+                    return;
+                }
                 //如果内容为空,删除page
                 dbHelper.deletePage(page);
                 return;
@@ -325,7 +329,7 @@ public class OnePageAty extends Activity implements GestureDetector.OnGestureLis
             return;
         } //如果当前页是新的一页，执行插入新页操作
         else if(page.getPageNumber()>note.getPagesNumber()){
-            Log.i("will insert ","");
+            Log.i("will insert :page",page.getContentString());
              dbHelper.addNewPage(page);
              return;
         }

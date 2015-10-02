@@ -50,6 +50,10 @@ public class SelectAty extends Activity {
                     public void onClick(DialogInterface dialogInterface, int i) {
 
                         String noteName=editText.getText().toString();
+                        if(noteName.equals("")){
+                            Toast.makeText(SelectAty.this,"请输入笔记名！",Toast.LENGTH_LONG).show();
+                            return;
+                        }
                         //审查笔记是否以数字开头
                         char[] tmpChar=noteName.toCharArray();
                         if(Character.isDigit(tmpChar[0])){
@@ -80,6 +84,10 @@ public class SelectAty extends Activity {
             }
         });
 
+       loadBooks();
+
+    }
+    public void loadBooks(){
         //添加已有笔记按钮
         final ArrayList<Note> noteArrayList=dbHelper.readNotes();
         //如果现有笔记不为空
@@ -90,8 +98,9 @@ public class SelectAty extends Activity {
                 layout.addView(bookButton);
             }
         }
-
     }
+
+
     private void addListener(final BookButton bookButton){
         bookButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -143,6 +152,13 @@ public class SelectAty extends Activity {
                 return true;
             }
         });
+    }
+
+    @Override
+    public void onResume(){
+        layout.removeViews(1,layout.getChildCount()-1);
+        loadBooks();
+        super.onResume();
     }
 
 

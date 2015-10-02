@@ -57,6 +57,10 @@ public class NoteDBHelper extends SQLiteOpenHelper {
             SQLiteDatabase db=this.getReadableDatabase();
             //开始事务
             db.beginTransaction();
+            Log.i("insert now:pageNumber",Integer.toString(page.getPageNumber()));
+            Log.i("insert now:pageContent",page.getContentString());
+            Log.i("insert now;sql","insert into " + page.getNoteName() + " (noteName,createTime,latestTime,contentString,tagNumber)" +
+                    " values( '" +page.getNoteName()+"',"+page.getCreateTime() + "," + page.getLatestTime() + ",'" + page.getContentString() +"',"+page.getTagNumber()+ ")");
             db.execSQL("insert into " + page.getNoteName() + " (noteName,createTime,latestTime,contentString,tagNumber)" +
                     " values( '" +page.getNoteName()+"',"+page.getCreateTime() + "," + page.getLatestTime() + ",'" + page.getContentString() +"',"+page.getTagNumber()+ ")");
             note.updataPagesNumber(note.getPagesNumber()+1,page.getLatestTime());
@@ -72,25 +76,15 @@ public class NoteDBHelper extends SQLiteOpenHelper {
     }
     public void updatePage(Page page){
         try{
-            //如果要更新的page内容为空,则删除本页
-//            if(page.getContentString()==""){
-//                deletePage(page);
-//            }
             //否则更新
             Note note=page.getNote();
-            Log.i("update now ","");
-            if(page.getPageNumber()==1) {
-                this.getReadableDatabase().execSQL("update "+page.getNoteName()+" set latestTime = "+page.getLatestTime()+", contentString = '" +
-                        page.getContentString()+"', tagNumber = "+page.getTagNumber()+" where noteName in (select noteName from "+page.getNoteName()+" limit 1 offset 0)");
-                Log.i("between uodata:",Integer.toString(note.getPagesNumber()));
-                updateNote(note);
-
-            }
-            else{
-                this.getReadableDatabase().execSQL("update "+page.getNoteName()+" set latestTime = "+page.getLatestTime()+", contentString ='" +
-                       page.getContentString()+"', tagNumber = "+page.getTagNumber()+" where noteName in (select noteName from "+page.getNoteName()+" limit 1 offset "+Integer.toString(page.getPageNumber()-2)+")");
-                updateNote(note);
-            }
+            Log.i("update now:pageNumber",Integer.toString(page.getPageNumber()));
+            Log.i("updata now:pageContent",page.getContentString());
+            Log.i("updata now:sql","update "+page.getNoteName()+" set latestTime = "+page.getLatestTime()+", contentString ='" +
+                    page.getContentString()+"', tagNumber = "+page.getTagNumber()+" where noteName in (select noteName from "+page.getNoteName()+" limit 1 offset "+Integer.toString(page.getPageNumber()-1)+")");
+            this.getReadableDatabase().execSQL("update "+page.getNoteName()+" set latestTime = "+page.getLatestTime()+", contentString ='" +
+                       page.getContentString()+"', tagNumber = "+page.getTagNumber()+" where createTime in (select createTime from "+page.getNoteName()+" limit 1 offset "+Integer.toString(page.getPageNumber()-1)+")");
+            updateNote(note);
         }
         catch (Exception e)
         {
@@ -118,19 +112,14 @@ public class NoteDBHelper extends SQLiteOpenHelper {
             SQLiteDatabase db=this.getReadableDatabase();
             //开始事务
             db.beginTransaction();
-            if(pageNumber==1){
-                db.execSQL("delete from "+note.getNoteName()+" where noteName in (select noteName from "+note.getNoteName()+" limit 1)");
-            }else {
-                db.execSQL("delete from " + note.getNoteName() + " where noteName in (select noteName from "+note.getNoteName()+" limit 1" +
-                        " offset "+Integer.toString(pageNumber-2)+")");
-            }
+            Log.i("deletePageNumber",Integer.toString(pageNumber));
+            db.execSQL("delete from " + note.getNoteName() + " where noteName in (select noteName from "+note.getNoteName()+" limit 1" +
+                        " offset "+Integer.toString(pageNumber-1)+")");
             //更新页码
             note.updataPagesNumber(note.getPagesNumber()-1);
             updateNote(note);
             db.setTransactionSuccessful();
-            Log.i("before_delete","");
             db.endTransaction();
-            Log.i("after_delete","");
         }
         catch (Exception e)
         {
@@ -191,14 +180,11 @@ public class NoteDBHelper extends SQLiteOpenHelper {
         //否则是1-最后一页之间的页码，正常返回查询到的page
         String noteName=note.getNoteName();
         Cursor cursor;
-        if(pageNumber==1)
-        {
-            cursor=this.getReadableDatabase().rawQuery("select * from "+noteName+" limit 1",null);
-        }else{
-            cursor=this.getReadableDatabase().rawQuery("select * from "+noteName+" limit 1 offset"+
-                    Integer.toString(pageNumber-2),null);
-        }
+        Log.i("readPageNumber:",Integer.toString(pageNumber));
+        cursor=this.getReadableDatabase().rawQuery("select * from "+noteName+" limit 1 offset "+
+                    Integer.toString(pageNumber-1),null);
         cursor.moveToFirst();
+        Log.i("readPagge--Cursor--count",Integer.toString(cursor.getCount()));
         Log.i("I am returning an normal page...","");
         return new Page(pageNumber,Integer.parseInt(cursor.getString(cursor.getColumnIndex("tagNumber"))),
                 cursor.getString(cursor.getColumnIndex("createTime")),
