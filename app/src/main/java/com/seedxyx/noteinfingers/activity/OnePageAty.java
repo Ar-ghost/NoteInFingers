@@ -34,6 +34,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.MediaController;
 import android.widget.RelativeLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.VideoView;
 
@@ -41,6 +42,7 @@ import com.seedxyx.noteinfingers.R;
 import com.seedxyx.noteinfingers.dbhelper.NoteDBHelper;
 import com.seedxyx.noteinfingers.unity.Note;
 import com.seedxyx.noteinfingers.unity.Page;
+import com.seedxyx.noteinfingers.util.GetPathFromUri4kitkat;
 import com.seedxyx.noteinfingers.util.StrConversionUtil;
 
 import java.io.File;
@@ -71,8 +73,9 @@ public class OnePageAty extends Activity implements GestureDetector.OnGestureLis
     private Button btnCamera;
     private Button btnSound;
     private Button btnViedo;
+    private Button btnDelete;
     //隐藏菜单的layout
-    LinearLayout hiddenLayout;
+    private LinearLayout hiddenLayout;
     private LinearLayout layout;
 
    //app对应存储文件夹
@@ -80,24 +83,42 @@ public class OnePageAty extends Activity implements GestureDetector.OnGestureLis
     //记录存储文件，便于OnResult后处理
     private String tmpFileName;
     NoteDBHelper dbHelper;
+    //需要用到的全局数据
+    Note note;
+    Page page;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.activity_one_page);
+        //加载界面资源
+        btnDelete=(Button)findViewById(R.id.btnDelete);
+        btnCamera=(Button)findViewById(R.id.btnCamera);
+        btnViedo=(Button)findViewById(R.id.btnVideo);
+        btnSound=(Button)findViewById(R.id.btnSound);
+        layout=(LinearLayout)findViewById(R.id.layout);
+        hiddenLayout=(LinearLayout)findViewById(R.id.hiddenLayout);
         //创建手势检测器
         detector=new GestureDetector(this,this);
         //加载数据
         dbHelper=new NoteDBHelper(OnePageAty.this,"note.db",1);
-        //Note note=getIntent().getParcelableExtra("note");
-        //if(getIntent().getIntExtra("pageNumber",0)==0)
-        //{
-        //    Page page=dbHelper.readPage(note,getIntent().getIntExtra("pageNumber",0));
-        //}else{
-//            Page page=dbHelper.readPage(note);
-//        }
-        Note note=new Note();
+
+        //加载note
+        note=getIntent().getParcelableExtra("note");
+        //加载对应的page
+        if(getIntent().getIntExtra("pageNumber",0)!=0)
+        {
+            Log.i("query--with pageNumber info","");
+            page=dbHelper.readPage(note,getIntent().getIntExtra("pageNumber",0));
+        }else{
+            Log.i("query---no pageNubmer info","");
+            Log.i("will query:note.pageNumber ",Integer.toString(note.getPagesNumber()));
+            page=dbHelper.readPage(note);
+        }
+        //加载整个界面
+        StrConversionUtil.writePageFromDB(OnePageAty.this,page,layout,getIntent().getIntExtra("colorNum",1));
+
 
         //未找到sd卡则退出界面
         if(null==(storage=getSdCar()))
@@ -111,11 +132,26 @@ public class OnePageAty extends Activity implements GestureDetector.OnGestureLis
             storageFile.mkdirs();
         }
 
-        btnCamera=(Button)findViewById(R.id.btnCamera);
-        btnViedo=(Button)findViewById(R.id.btnVideo);
-        btnSound=(Button)findViewById(R.id.btnSound);
-        layout=(LinearLayout)findViewById(R.id.layout);
-        hiddenLayout=(LinearLayout)findViewById(R.id.hiddenLayout);
+
+
+
+        //删除当前页的监听器
+        btnDelete.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                page.clearContentString();
+                page.deleteThis();
+
+                //删除之后
+                Intent intent=new Intent(OnePageAty.this,OnePageAty.class);
+                intent.putExtra("note",note);
+                intent.putExtra("pageNumber",page.getPageNumber());
+                startActivity(intent);
+                OnePageAty.this.finish();
+                //设置页面切换效果
+                overridePendingTransition(R.anim.in_from_right,R.anim.out_to_left);
+            }
+        });
 
         //启动相机，长按此按钮为添加现有图片
         btnCamera.setOnClickListener(new View.OnClickListener() {
@@ -201,38 +237,22 @@ public class OnePageAty extends Activity implements GestureDetector.OnGestureLis
                 }
             }
             //调用方法添加View及更改数据
-            //StrConversionUtil.addImageView(OnePageAty.this,page,storage+getTime()+".jpg",layout);
+            StrConversionUtil.addImageView(OnePageAty.this,page,storage+getTime()+".jpg",layout);
         }
         //如果为拍摄录像
         if(resultCode == Activity.RESULT_OK&&requestCode==VIDEO_REQUEST_CODE){
             //成功拍摄后调用方法添加数据
             if(tmpFileName!=null) {
-                //StrConversionUtil.addVideoView(OnePageAty.this, page, tmpFileName, layout);
+                StrConversionUtil.addVideoView(OnePageAty.this, page, tmpFileName, layout);
             }
             tmpFileName=null;
         }
         if(resultCode == Activity.RESULT_OK&&requestCode==SOUND_REQUEST_CODE){
             //成功录音后调用方法添加数据
-            //----------------
-            Uri audioPath=data.getData();
+            String audioPath=GetPathFromUri4kitkat.getPath(OnePageAty.this,data.getData());
             String dest=storage+getTime()+".mp3";
-
-
-
-            Log.i("charset", Charset.defaultCharset().displayName());
-            Log.i("path",audioPath.toString().substring(7));
-            try {
-                Log.i("path-gbk", new String(audioPath.toString().getBytes("utf-8"), "GB2312"));
-            }
-            catch (Exception e)
-            {
-                e.printStackTrace();
-            }
-            Log.i("路径","中文打印");
-
-            copyTo(audioPath.toString().substring(7), dest);
-            //StrConversionUtil.addImageView(OnePageAty.this,page,dest,layout);
-
+            copyTo(audioPath,dest);
+            StrConversionUtil.addImageView(OnePageAty.this,page,dest,layout);
         }
         //如果为选择现有图片
         if(resultCode == Activity.RESULT_OK&&requestCode==CAMERA_LONG_REQUEST_CODE){
@@ -242,13 +262,14 @@ public class OnePageAty extends Activity implements GestureDetector.OnGestureLis
         if(resultCode == Activity.RESULT_OK&&requestCode==VIDEO_LONG_REQUEST_CODE){
             addExist(data,".mp4","请选择视频文件！");
         }
+        //选择现有音频
         if(resultCode == Activity.RESULT_OK&&requestCode==SOUND_LONG_REQUEST_CODE){
             if(data.getData().toString().startsWith("file://"))
             {
-                Uri audioPath=data.getData();
+                String audioPath=GetPathFromUri4kitkat.getPath(OnePageAty.this,data.getData());
                 String dest=storage+getTime()+".mp3";
-                copyTo(audioPath.toString().substring(7),dest);
-                //StrConversionUtil.addImageView(OnePageAty.this,page,dest,layout);
+                copyTo(audioPath,dest);
+                StrConversionUtil.addImageView(OnePageAty.this,page,dest,layout);
                 return;
             }
             addExist(data,".mp3","请选择音频文件！");
@@ -275,18 +296,55 @@ public class OnePageAty extends Activity implements GestureDetector.OnGestureLis
         }
         String dest=storage+getTime()+suffix;
         copyTo(picturePath,dest);
-        //StrConversionUtil.addImageView(OnePageAty.this,page,dest,layout);
+        StrConversionUtil.addImageView(OnePageAty.this,page,dest,layout);
     }
 
+    //每次activity暂停则自动更新一次数据库
     @Override
     protected void onPause(){
-        super.onPause();
-        writeToDB();
+        Log.i("I am pausing ","\n");
+        updateDB();
+        if(dbHelper!=null){
+            dbHelper.close();
+        }
+        super.onDestroy();
     }
 
-    //将数据写入数据库
-    protected void writeToDB(){
+    //将实时数据写入数据库
+    protected void updateDB(){
+        //首先更新page，保证最新数据
+        updatePage();
+        Log.i("contentString",page.getContentString());
+        //更新完毕之后
+        if(page.getContentString().replaceAll(StrConversionUtil.WORDTAG,"").replaceAll(StrConversionUtil.SEPARATER,"").equals("")){
+            if(note.getPagesNumber()!=0){
+                //如果内容为空,删除page
+                dbHelper.deletePage(page);
+                return;
+            }
+            return;
+        } //如果当前页是新的一页，执行插入新页操作
+        else if(page.getPageNumber()>note.getPagesNumber()){
+            Log.i("will insert ","");
+             dbHelper.addNewPage(page);
+             return;
+        }
+        Log.i("will update soon","");
+        //否则更新
+        dbHelper.updatePage(page);
+    }
 
+    //执行一次数据更新到当前page
+    public void updatePage(){
+        //遍历layout中所有view，如果为EditText则更新内容
+        View view;
+        for(int i=0;i<page.getTagNumber();i++){
+            view=layout.getChildAt(i);
+            if(view instanceof EditText)
+            {
+                page.updateContentStr(i,StrConversionUtil.WORDTAG+((EditText) view).getText().toString());
+            }
+        }
     }
 
     //将图片写入SD卡
@@ -392,15 +450,73 @@ public class OnePageAty extends Activity implements GestureDetector.OnGestureLis
         //向左滑,页码加1
         else if(motionEvent1.getX()-motionEvent2.getX()>FLIP_DISTANCE_MENU&&vx<-500)
         {
-
+            //首先执行一次对page的更新
+            updatePage();
+            String tmp=page.getContentString().replaceAll(StrConversionUtil.WORDTAG,"").replaceAll(StrConversionUtil.SEPARATER,"");
+            //再判断
+            //如果内容为空且页码为note最后一页加一或最后一页，则不允许再向后翻
+            if(tmp.equals("")&&((page.getPageNumber()==note.getPagesNumber()+1)||(page.getPageNumber()==note.getPagesNumber()))){
+                return true;
+            }
+            //如果内容不为空且页码为最后一页加一，则添加笔记数据
+            else if(!tmp.equals("")&&page.getPageNumber()==note.getPagesNumber()+1){
+                dbHelper.addNewPage(page);
+                //向后翻页
+                pageTurning("l",note.getPagesNumber()+1);
+            }
+            //如果内容不为空且页码为最后一页，则更新笔记数据
+            else if(!tmp.equals("")&&page.getPageNumber()==note.getPagesNumber()){
+                dbHelper.updatePage(page);
+                //向后翻页
+                pageTurning("l",note.getPagesNumber()+1);
+            }
+            //如果内容为空，翻页时删除此页
+            else if(tmp.equals("")){
+                dbHelper.deletePage(page);
+                //向后翻页
+                pageTurning("l",page.getPageNumber());
+            }
+            //如果内容不为空，正常翻页
+            else
+            {
+                //向后翻页
+                pageTurning("l",page.getPageNumber()+1);
+            }
             return true;
         }
         //向右滑，页码减1
         else if(motionEvent2.getX()-motionEvent1.getX()>FLIP_DISTANCE_MENU&&vx>500)
         {
+            //如果已经为第一页，不做响应
+            if(page.getPageNumber()==1)
+            {
+                Toast.makeText(OnePageAty.this,"已经是第一页！",Toast.LENGTH_LONG).show();
+                return true;
+            }
+            //向前翻页
+            pageTurning("f",page.getPageNumber()-1);
             return true;
         }
         return false;
     }
 
+    //翻页
+    public void pageTurning(String direction,int pageNumber){
+
+        Intent intent = new Intent(OnePageAty.this, OnePageAty.class);
+        intent.putExtra("note", note);
+        intent.putExtra("pageNumber", pageNumber);
+        startActivity(intent);
+        //结束当前activity
+        OnePageAty.this.finish();
+        //设置切换动画
+        if (direction.equals("f")) {
+            overridePendingTransition(R.anim.in_from_left, R.anim.out_to_right);
+        } else if (direction.equals("l")) {
+            overridePendingTransition(R.anim.in_from_right, R.anim.out_to_left);
+        }
+    }
 }
+
+
+

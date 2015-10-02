@@ -30,7 +30,7 @@ public class InitialAty extends Activity {
             public void onFinish() {
                 //倒计时结束后在这里实现activity跳转
                 Intent intent = new Intent();
-                intent.setClass(InitialAty.this,OnePageAty.class);
+                intent.setClass(InitialAty.this,SelectAty.class);
                 startActivity(intent);
                 finish();    //跳转后销毁自身的activity  否则按返回 还会跳回到图片
                 overridePendingTransition(R.anim.in_from_right,R.anim.out_to_left);

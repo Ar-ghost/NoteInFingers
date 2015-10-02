@@ -2,6 +2,7 @@ package com.seedxyx.noteinfingers.unity;
 
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.util.Log;
 
 import com.seedxyx.noteinfingers.util.StrConversionUtil;
 
@@ -20,12 +21,17 @@ public class Page implements Parcelable {
     private Note note;
 
     public Page(){
-        createTime="";
-        latestTime="";
+        createTime=getTime();
+        latestTime=createTime;
         pageNumber=0;
         tagNumber=0;
         contentString="";
         note=null;
+    }
+    public Page(int pageNumber,Note note){
+        this();
+        this.pageNumber=pageNumber;
+        this.note=note;
     }
     public Page(int pageNumber,int tagNumber,String createTime,String latestTime,String contentString){
         this.createTime=createTime;
@@ -41,18 +47,8 @@ public class Page implements Parcelable {
         this.note=note;
     }
 
-    public void setCreateTime(String createTime){
-        this.createTime=createTime;
-    }
-    public void setPageNumber(int pageNumber){
-        this.pageNumber=pageNumber;
-    }
-    public void setContentString(String contentString){
-        this.contentString=contentString;
-    }
-    public void setTagNumber(int tagNumber){
-        this.tagNumber=tagNumber;
-    }
+    public void clearContentString(){contentString="";}
+
     public int getTagNumber(){
         return tagNumber;
     }
@@ -71,18 +67,24 @@ public class Page implements Parcelable {
     public String getContentString(){
         return contentString;
     }
-
+    public Note getNote(){
+        return note;
+    }
     //更改contentString,index为待插入的位置,waitStr应为<tag>+内容的形式（不含separater）
     //封装了tagNumber的改变
     public void insertIntoContentStr(int index,String waitStr){
+//        Log.i("waitStr",waitStr);
         String content[]=contentString.split(StrConversionUtil.SEPARATER);
         StringBuilder tmp=new StringBuilder(contentString);
         //记录第index个tag前的字符数
         int total=0;
-        for(int i=0;i<index;i++)
+        for(int i=0;i<index-1;i++)
         {
             total+=content[i].length()+StrConversionUtil.SEPARATER.length();
         }
+//        Log.i("tmp",tmp.toString());
+//        Log.i("total",contentString);
+//        Log.i("index",Integer.toString(index));
         tmp.insert(total,waitStr+StrConversionUtil.SEPARATER);
         contentString=tmp.toString();
         tagNumber++;
@@ -90,11 +92,13 @@ public class Page implements Parcelable {
     }
     //更新contentString，index为待更新的位置,waitStr应为<tag>+内容的形式（不含separater）
     public void updateContentStr(int index,String waitStr){
+//        Log.i("index",Integer.toString(index));
+//        Log.i("waitStr",waitStr);
         String content[]=contentString.split(StrConversionUtil.SEPARATER);
         StringBuilder tmp=new StringBuilder(contentString);
         //记录第index个tag前的字符数
         int total=0;
-        for(int i=0;i<index;i++)
+        for(int i=0;i<index-1;i++)
         {
             total+=content[i].length()+StrConversionUtil.SEPARATER.length();
         }
@@ -104,11 +108,25 @@ public class Page implements Parcelable {
         updateLatestTime();
     }
 
-    private void updateLatestTime(){
-        SimpleDateFormat sDateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
-        String time= sDateFormat.format(new Date());
+
+    //删除自己，更新note
+    public void deleteThis(){
+        if(this.pageNumber>note.getPagesNumber()) {
+            note.updataLatestTime();
+            return;
+        }
+        note.updataPagesNumber(note.getPagesNumber()-1);
+    }
+    //更新自己的时间
+    public void updateLatestTime(){
+        String time=getTime();
         latestTime=time;
         note.updateLatestTime(time);
+    }
+    //获取当前时间
+    protected String getTime(){
+        SimpleDateFormat sDateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
+        return sDateFormat.format(new Date());
     }
 
 

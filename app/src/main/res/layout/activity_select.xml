@@ -1,11 +1,18 @@
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    tools:context="com.seedxyx.noteinfingers.activity.SelectAty"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+
+<LinearLayout
     android:orientation="vertical"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context="com.seedxyx.noteinfingers.activity.SelectAty">
+    android:layout_height="match_parent">
+
 
     <ImageView
+        android:background="@drawable/bookshelf_head"
         android:layout_weight="1"
         android:layout_width="fill_parent"
         android:layout_height="0dp" />
@@ -13,30 +20,48 @@
         android:layout_weight="9"
         android:layout_width="fill_parent"
         android:layout_height="0dp">
-        <Button
-            android:layout_alignParentRight="true"
-            android:id="@+id/btnAddNote"
-            android:layout_width="100dp"
-            android:layout_height="30dp" />
+
     <HorizontalScrollView
+        android:background="@drawable/bookshelf_body"
+        android:scrollbars="none"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent">
 
         <LinearLayout
+
             android:id="@+id/layout"
+            android:gravity="bottom"
             android:orientation="horizontal"
             android:layout_width="fill_parent"
             android:layout_height="fill_parent">
             <Button
-                android:layout_width="wrap_content"
+                android:background="@drawable/bookshelf_left"
+                android:layout_width="40dp"
                 android:layout_height="fill_parent" />
 
         </LinearLayout>
 
     </HorizontalScrollView>
+        <Button
+            android:background="@drawable/create_note"
+            android:layout_alignParentRight="true"
+            android:id="@+id/btnAddNote"
+            android:layout_width="100dp"
+            android:layout_height="60dp" />
         </RelativeLayout>
     <ImageView
+        android:background="@drawable/bookshelf_end"
         android:layout_weight="1"
         android:layout_width="fill_parent"
         android:layout_height="0dp" />
 </LinearLayout>
+    <Button
+        android:id="@+id/settings"
+        android:padding="50dp"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentTop="true"
+        android:layout_width="40dp"
+        android:layout_height="20dp"
+        android:background="@drawable/settings"/>
+
+</RelativeLayout>
