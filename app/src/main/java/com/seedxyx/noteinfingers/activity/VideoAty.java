@@ -21,6 +21,7 @@ public class VideoAty extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_video);
 
+        getWindow().setBackgroundDrawableResource(R.drawable.bkcolor);
         videoView=(VideoView)findViewById(R.id.videoView);
         mediaController=new MediaController(this);
         File video=new File(getIntent().getExtras().getString("videoPath"));

@@ -7,8 +7,9 @@
         android:id="@+id/imageView"
         android:src="@drawable/book1"
         android:layout_centerInParent="true"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"/>
+        android:scaleType="centerCrop"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"/>
     <TextView
         android:id="@+id/noteName"
         android:layout_centerInParent="true"

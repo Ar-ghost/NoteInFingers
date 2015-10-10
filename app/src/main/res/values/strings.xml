@@ -9,5 +9,6 @@
     <string name="title_activity_select_aty">SelectAty</string>
     <string name="title_activity_one_page_aty">OnePageAty</string>
     <string name="title_activity_video_aty">VideoAty</string>
+    <drawable name="bkcolor">#ff000000</drawable>
 
 </resources>

@@ -7,6 +7,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.Cursor;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -31,7 +32,7 @@ public class SelectAty extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_select);
-
+        Log.i("SelectAty has been created!","");
         btnAddNote=(Button)findViewById(R.id.btnAddNote);
 
         layout=(LinearLayout)findViewById(R.id.layout);
@@ -88,16 +89,20 @@ public class SelectAty extends Activity {
 
     }
     public void loadBooks(){
+        Log.i("loadBooks","");
         //添加已有笔记按钮
         final ArrayList<Note> noteArrayList=dbHelper.readNotes();
         //如果现有笔记不为空
         if(noteArrayList!=null) {
+            Log.i("note.number",""+noteArrayList.size());
             for (int i = 0; i < noteArrayList.size(); i++) {
+                Log.i("这是第"+i+"本书","\n");
                 final BookButton bookButton = new BookButton(SelectAty.this, noteArrayList.get(i));
                 addListener(bookButton);
                 layout.addView(bookButton);
             }
         }
+        Log.i("loadBook over","");
     }
 
 
@@ -156,12 +161,12 @@ public class SelectAty extends Activity {
 
     @Override
     public void onResume(){
-        layout.removeViews(1,layout.getChildCount()-1);
+        Log.i("resume","");
+        if(layout.getChildCount()>0){
+            layout.removeViews(0,layout.getChildCount());
+        }
         loadBooks();
         super.onResume();
     }
-
-
-
 
 }

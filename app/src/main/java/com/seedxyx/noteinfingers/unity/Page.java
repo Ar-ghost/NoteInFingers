@@ -73,50 +73,58 @@ public class Page implements Parcelable {
     //更改contentString,index为待插入的位置,waitStr应为<tag>+内容的形式（不含separater）
     //封装了tagNumber的改变
     public void insertIntoContentStr(int index,String waitStr){
-//        Log.i("waitStr",waitStr);
+        Log.i("inpage--insert:index+waitStr",index+waitStr);
         String content[]=contentString.split(StrConversionUtil.SEPARATER);
         StringBuilder tmp=new StringBuilder(contentString);
         //记录第index个tag前的字符数
         int total=0;
-        for(int i=0;i<index-1;i++)
+        for(int i=0;i<index;i++)
         {
             total+=content[i].length()+StrConversionUtil.SEPARATER.length();
         }
-//        Log.i("tmp",tmp.toString());
-//        Log.i("total",contentString);
-//        Log.i("index",Integer.toString(index));
         tmp.insert(total,waitStr+StrConversionUtil.SEPARATER);
         contentString=tmp.toString();
+        Log.i("inPage--insert:contentString",contentString);
         tagNumber++;
         updateLatestTime();
     }
     //更新contentString，index为待更新的位置,waitStr应为<tag>+内容的形式（不含separater）
     public void updateContentStr(int index,String waitStr){
-//        Log.i("index",Integer.toString(index));
-//        Log.i("waitStr",waitStr);
+        Log.i("inPage:index",Integer.toString(index));
+        Log.i("inPage:waitStr",waitStr);
         String content[]=contentString.split(StrConversionUtil.SEPARATER);
         StringBuilder tmp=new StringBuilder(contentString);
         //记录第index个tag前的字符数
         int total=0;
-        for(int i=0;i<index-1;i++)
+        for(int i=0;i<index;i++)
         {
             total+=content[i].length()+StrConversionUtil.SEPARATER.length();
         }
         tmp.replace(total,total+content[index].length(),waitStr);
         contentString=tmp.toString();
+        Log.i("inPage:contentString",contentString);
+        //更新最后更改时间
+        updateLatestTime();
+    }
+    //删除
+    public void deleteContentStr(int index){
+        String content[]=contentString.split(StrConversionUtil.SEPARATER);
+        StringBuilder tmp=new StringBuilder(contentString);
+        //记录第index个tag前的字符数
+        int total=0;
+        for(int i=0;i<index;i++)
+        {
+            total+=content[i].length()+StrConversionUtil.SEPARATER.length();
+        }
+        tmp.replace(total,total+content[index].length()+StrConversionUtil.SEPARATER.length(),"");
+        contentString=tmp.toString();
+        tagNumber--;
+        Log.i("inPage:contentString",contentString);
         //更新最后更改时间
         updateLatestTime();
     }
 
 
-    //删除自己，更新note
-    public void deleteThis(){
-        if(this.pageNumber>note.getPagesNumber()) {
-            note.updataLatestTime();
-            return;
-        }
-        note.updataPagesNumber(note.getPagesNumber()-1);
-    }
     //更新自己的时间
     public void updateLatestTime(){
         String time=getTime();

@@ -3,6 +3,8 @@ package com.seedxyx.noteinfingers.activity;
 import android.animation.ObjectAnimator;
 import android.app.ActionBar;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.Cursor;
 import android.gesture.GestureOverlayView;
@@ -13,6 +15,8 @@ import android.media.ThumbnailUtils;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Message;
 import android.os.Parcel;
 import android.provider.MediaStore;
 import android.text.Spannable;
@@ -75,7 +79,8 @@ public class OnePageAty extends Activity implements GestureDetector.OnGestureLis
     private Button btnViedo;
     private Button btnDelete;
     //隐藏菜单的layout
-    private LinearLayout hiddenLayout;
+    private LinearLayout hiddenLayout2;
+    private RelativeLayout hiddenLayout;
     private LinearLayout layout;
 
    //app对应存储文件夹
@@ -86,19 +91,35 @@ public class OnePageAty extends Activity implements GestureDetector.OnGestureLis
     //需要用到的全局数据
     Note note;
     Page page;
+    int colorNum;
 
+    //
+    Handler handler;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.activity_one_page);
+        handler=new Handler(){
+            @Override
+            public void handleMessage(Message msg){
+                Log.i("handle get!","");
+                if(msg.what==111){
+                    Log.i("will start alertDelete!","");
+                    View view=(View)msg.obj;
+                    alertDelete(view);
+                }
+            }
+        };
+
         //加载界面资源
         btnDelete=(Button)findViewById(R.id.btnDelete);
         btnCamera=(Button)findViewById(R.id.btnCamera);
         btnViedo=(Button)findViewById(R.id.btnVideo);
         btnSound=(Button)findViewById(R.id.btnSound);
         layout=(LinearLayout)findViewById(R.id.layout);
-        hiddenLayout=(LinearLayout)findViewById(R.id.hiddenLayout);
+        hiddenLayout2=(LinearLayout)findViewById(R.id.hiddenLayout2);
+        hiddenLayout=(RelativeLayout)findViewById(R.id.hiddenLayout);
         //创建手势检测器
         detector=new GestureDetector(this,this);
         //加载数据
@@ -116,8 +137,9 @@ public class OnePageAty extends Activity implements GestureDetector.OnGestureLis
             Log.i("will query:note.pageNumber ",Integer.toString(note.getPagesNumber()));
             page=dbHelper.readPage(note);
         }
+        colorNum=getIntent().getIntExtra("colorNum",1);
         //加载整个界面
-        StrConversionUtil.writePageFromDB(OnePageAty.this,page,layout,getIntent().getIntExtra("colorNum",1));
+        StrConversionUtil.writePageFromDB(OnePageAty.this,page,layout,colorNum,handler);
 
 
         //未找到sd卡则退出界面
@@ -140,7 +162,9 @@ public class OnePageAty extends Activity implements GestureDetector.OnGestureLis
             @Override
             public void onClick(View view) {
                 page.clearContentString();
-                page.deleteThis();
+                layout.removeAllViews();
+                Log.i("page has been cleared","");
+                dbHelper.deletePage(page);
 
                 //删除之后
                 Intent intent=new Intent(OnePageAty.this,OnePageAty.class);
@@ -252,7 +276,7 @@ public class OnePageAty extends Activity implements GestureDetector.OnGestureLis
             String audioPath=GetPathFromUri4kitkat.getPath(OnePageAty.this,data.getData());
             String dest=storage+getTime()+".mp3";
             copyTo(audioPath,dest);
-            StrConversionUtil.addImageView(OnePageAty.this,page,dest,layout);
+            StrConversionUtil.addSoundView(OnePageAty.this,page,dest,layout);
         }
         //如果为选择现有图片
         if(resultCode == Activity.RESULT_OK&&requestCode==CAMERA_LONG_REQUEST_CODE){
@@ -296,6 +320,14 @@ public class OnePageAty extends Activity implements GestureDetector.OnGestureLis
         }
         String dest=storage+getTime()+suffix;
         copyTo(picturePath,dest);
+        if(suffix.equals(".mp4")){
+            StrConversionUtil.addVideoView(OnePageAty.this,page,dest,layout);
+            return;
+        }
+        if(suffix.equals(".mp3")){
+            StrConversionUtil.addSoundView(OnePageAty.this,page,dest,layout);
+            return;
+        }
         StrConversionUtil.addImageView(OnePageAty.this,page,dest,layout);
     }
 
@@ -400,12 +432,32 @@ public class OnePageAty extends Activity implements GestureDetector.OnGestureLis
     }
 
 
+    public void alertDelete(final View view){
+        Log.i("alertDelete","");
+        new AlertDialog.Builder(OnePageAty.this).setTitle("确认要删除吗？").setPositiveButton("确定",new DialogInterface.OnClickListener() {
+        @Override
+        public void onClick(DialogInterface dialogInterface, int i) {
+            //删除此项View
+            int index=view.getId();
+            layout.removeView(view);
+            page.deleteContentStr(index);
+            //最后更改Id
+            for(int n=index;n<page.getTagNumber();n++){
+                layout.getChildAt(index).setId(index);
+            }
+        }
+        }).setNegativeButton("取消",null).create().show();
+    }
+
+
+
     //--------处理界面的触碰事件--------
 
     //触碰事件的优先级处理
     @Override
     public boolean dispatchTouchEvent(MotionEvent me){
-        detector.onTouchEvent(me);
+        if(detector.onTouchEvent(me))
+            return true;
         return super.dispatchTouchEvent(me);
     }
     //--------重写手势检测器的方法----------
@@ -437,18 +489,35 @@ public class OnePageAty extends Activity implements GestureDetector.OnGestureLis
 
     public boolean onFling(android.view.MotionEvent motionEvent1, android.view.MotionEvent motionEvent2, float vx, float vy){
         //向上划
-        if(motionEvent1.getY()-motionEvent2.getY()>FLIP_DISTANCE_MENU&&vy<-500&&hiddenLayout.getTranslationY()==0)
+        if(motionEvent1.getY()-motionEvent2.getY()>FLIP_DISTANCE_MENU&&vy<-500&&(hiddenLayout.getTranslationY()==0||hiddenLayout.getTranslationY()==-hiddenLayout.getHeight()))
         {
-            ObjectAnimator animator=ObjectAnimator.ofFloat(hiddenLayout,"translationY",-hiddenLayout.getHeight());
-            animator.setDuration(100);
-            animator.start();
-            return true;
+            if(hiddenLayout.getTranslationY()==0) {
+                ObjectAnimator animator = ObjectAnimator.ofFloat(hiddenLayout, "translationY", -hiddenLayout.getHeight());
+                animator.setDuration(100);
+                ObjectAnimator animator2=ObjectAnimator.ofFloat(hiddenLayout2,"translationY",-hiddenLayout.getHeight());
+                animator2.setDuration(100);
+                animator.start();
+                animator2.start();
+                return true;
+            }
+            if(hiddenLayout.getTranslationY()==-hiddenLayout.getHeight()){
+                ObjectAnimator animator = ObjectAnimator.ofFloat(hiddenLayout, "translationY", -(hiddenLayout2.getHeight()+hiddenLayout.getHeight()));
+                animator.setDuration(100);
+                ObjectAnimator animator2 = ObjectAnimator.ofFloat(hiddenLayout2, "translationY", -(hiddenLayout2.getHeight()+hiddenLayout.getHeight()));
+                animator.setDuration(100);
+                animator.start();
+                animator2.start();
+                return true;
+            }
         }
-        else if(motionEvent2.getY()-motionEvent1.getY()>FLIP_DISTANCE_MENU&&vy>500&&hiddenLayout.getTranslationY()==-hiddenLayout.getHeight())
+        else if(motionEvent2.getY()-motionEvent1.getY()>FLIP_DISTANCE_MENU&&vy>500&&(hiddenLayout.getTranslationY()==-hiddenLayout.getHeight()||hiddenLayout.getTranslationY()==-(hiddenLayout.getHeight()+hiddenLayout2.getHeight())))
         {
             ObjectAnimator animator=ObjectAnimator.ofFloat(hiddenLayout,"translationY",0);
             animator.setDuration(100);
+            ObjectAnimator animator2=ObjectAnimator.ofFloat(hiddenLayout2,"translationY",0);
+            animator.setDuration(100);
             animator.start();
+            animator2.start();
             return true;
         }
         //向左滑,页码加1
@@ -510,6 +579,7 @@ public class OnePageAty extends Activity implements GestureDetector.OnGestureLis
         Intent intent = new Intent(OnePageAty.this, OnePageAty.class);
         intent.putExtra("note", note);
         intent.putExtra("pageNumber", pageNumber);
+        intent.putExtra("colorNum",colorNum);
         startActivity(intent);
         //结束当前activity
         OnePageAty.this.finish();
